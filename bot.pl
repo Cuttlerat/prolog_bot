@@ -38,8 +38,6 @@ text_to_command(Message, Command, Args) :-
     split_string(Message, " ", "", [CommandTmp|Args]),
     split_string(CommandTmp, "@", "/", [Command|_]).
 
-construct_functor(Name, [], Functor) :-
-    functor(Functor, Name, 0), !.
 construct_functor(Name, Args, Functor) :-
     length(Args, Arity),
     functor(Functor, Name, Arity),
