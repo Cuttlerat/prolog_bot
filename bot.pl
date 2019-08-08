@@ -63,6 +63,7 @@ router(Message) :-
     url("sendMessage", URL),
     http_post(URL, form_data([ text = Text,
                                chat_id = ChatID ]), _, []),
+    update_offset(Message),
     log_print(ChatID, Command),
     !.
 router(_).
@@ -71,12 +72,6 @@ process_messages :-
     get_updates(Data),
     include(is_command, Data.get(result), Commands),
     maplist(router, Commands),
-    (
-        last(Data.get(result), Last),
-        update_offset(Last)
-    ;
-        true
-    ),
     process_messages.
 
 %?- process_messages.
