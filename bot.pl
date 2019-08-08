@@ -35,7 +35,7 @@ command_to_name(Command, Name) :-
     atomic_concat("telegram_command_", Command, Name).
 
 text_to_command(Message, Command, Args) :-
-    split_string(Message, " ", "", [CommandTmp|Args]),
+    split_string(Message, " ", " ", [CommandTmp|Args]),
     split_string(CommandTmp, "@", "/", [Command|_]).
 
 construct_functor(Name, Args, Functor) :-
@@ -62,6 +62,7 @@ router(Message) :-
     call(Functor),
     url("sendMessage", URL),
     http_post(URL, form_data([ text = Text,
+                               reply_to_message_id = Message.get(message).get(message_id),
                                chat_id = ChatID ]), _, []),
     update_offset(Message),
     log_print(ChatID, Command),
