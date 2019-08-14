@@ -5,14 +5,18 @@
 
 ?- consult(token).
 
-url_concat([X], X) :- !.
-url_concat([H1, H2|T], Output) :-
-    string_concat(H1, H2, H3),
-    url_concat([H3|T], Output).
+join(List, Output) :-
+    join('', List, Output).
+
+join(_, [X], X) :- !.
+join(Separator, [H1, H2|T], Output) :-
+    string_concat(H1, Separator, Tmp),
+    string_concat(Tmp, H2, H3),
+    join(Separator, [H3|T], Output).
 
 url(Command, URL) :-
     token(Token),
-    url_concat(["https://api.telegram.org/bot", Token, "/", Command], URL).
+    join(["https://api.telegram.org/bot", Token, "/", Command], URL).
 
 get_updates(Data) :-
     url("getUpdates", URL),
@@ -24,7 +28,7 @@ get_updates(Data) :-
 
 update_offset(Message) :-
     url("getUpdates", URL),
-    NewOffset #= Message.get(update_id) + 1,
+    NewOffset is Message.get(update_id) + 1,
     http_post(URL, form_data([offset = NewOffset]), _, []).
 
 is_command(Message) :-
@@ -45,34 +49,51 @@ construct_functor(Name, Args, Functor) :-
 
 construct_functor_(_, [], _, X, X) :- !.
 construct_functor_(Name, [Arg|Args], Functor, Arity, ArgNumber) :-
-    ArgNumber1 #= ArgNumber + 1,
+    ArgNumber1 is ArgNumber + 1,
     arg(ArgNumber1, Functor, Arg),
     construct_functor_(Name, Args, Functor, Arity, ArgNumber1).
 
-log_print(ChatID, Command) :-
-    format('[~d]: ~s~n', [ChatID, Command]).
+log_print(Message, Text) :-
+    get_time(TimeStamp),
+    round(TimeStamp, UnixTimeStamp),
+    format('[~d] ~d: ~s~n', [UnixTimeStamp,
+                             Message.get(message).get(chat).get(id),
+                             Text]).
 
-router(Message) :-
-    ChatID = Message.get(message).get(chat).get(id),
+send_message(Text, MessageID, ChatID) :-
+    url("sendMessage", URL),
+    http_post(URL, form_data([ text = Text,
+                               reply_to_message_id = MessageID,
+                               chat_id = ChatID ]), _, []).
+
+router(command, Message) :-
     text_to_command(Message.get(message).get(text), Command, Args),
     command_to_name(Command, Name),
     construct_functor(Name, [Args, Text], Functor),
     consult(commands),
     current_predicate(_, Functor),
     call(Functor),
-    url("sendMessage", URL),
-    http_post(URL, form_data([ text = Text,
-                               reply_to_message_id = Message.get(message).get(message_id),
-                               chat_id = ChatID ]), _, []),
+    send_message(Text,
+        Message.get(message).get(message_id),
+        Message.get(message).get(chat).get(id)),
+    join(" ", [Command|Args], Log),
+    log_print(Message, Log).
+
+process_message(Message) :-
     update_offset(Message),
-    log_print(ChatID, Command),
+    fail.
+
+process_message(Message) :-
+    is_command(Message),
+    router(command, Message),
     !.
-router(_).
 
-process_messages :-
+process_message(_).
+
+main :-
+    repeat,
     get_updates(Data),
-    include(is_command, Data.get(result), Commands),
-    maplist(router, Commands),
-    process_messages.
+    maplist(process_message, Data.get(result)),
+    fail.
 
-%?- process_messages.
+?- main.
