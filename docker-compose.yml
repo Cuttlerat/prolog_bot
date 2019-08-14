@@ -6,4 +6,5 @@ services:
       - ./bot.pl:/app/bot.pl:ro
       - ./commands.pl:/app/commands.pl:ro
       - ./token.pl:/app/token.pl:ro
+    restart: on-failure
     command: swipl /app/bot.pl
