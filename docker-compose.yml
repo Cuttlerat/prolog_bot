@@ -1,0 +1,9 @@
+version: '3'
+services:
+  prolog_bot:
+    image: swipl:8.1.8
+    volumes:
+      - ./bot.pl:/app/bot.pl:ro
+      - ./commands.pl:/app/commands.pl:ro
+      - ./token.pl:/app/token.pl:ro
+    command: swipl /app/bot.pl
