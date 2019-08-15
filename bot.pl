@@ -4,19 +4,11 @@
 :- use_module(library(clpfd)).
 
 ?- consult(token).
-
-join(List, Output) :-
-    join('', List, Output).
-
-join(_, [X], X) :- !.
-join(Separator, [H1, H2|T], Output) :-
-    string_concat(H1, Separator, Tmp),
-    string_concat(Tmp, H2, H3),
-    join(Separator, [H3|T], Output).
+?- consult(ping_utils).
 
 url(Command, URL) :-
     token(Token),
-    join(["https://api.telegram.org/bot", Token, "/", Command], URL).
+    atomics_to_string(["https://api.telegram.org/bot", Token, "/", Command], URL).
 
 get_updates(Data) :-
     url("getUpdates", URL),
@@ -76,12 +68,29 @@ router(command, Message) :-
     send_message(Text,
         Message.get(message).get(message_id),
         Message.get(message).get(chat).get(id)),
-    join(" ", [Command|Args], Log),
+    atomics_to_string([Command|Args], " ", Log),
     log_print(Message, Log).
+
+router(ping, _, []) :- !.
+router(ping, Message, Usernames) :-
+    atomics_to_string(Usernames, " ", Text),
+    send_message(Text,
+        Message.get(message).get(message_id),
+        Message.get(message).get(chat).get(id)),
+    atomics_to_string(["Ping by",
+                       Message.get(message).get(from).get(username),
+                       "to", Text], " ", Log),
+    log_print(Message, Log),
+    !.
 
 process_message(Message) :-
     update_offset(Message),
     fail.
+
+process_message(Message) :-
+    findall(Username, get_ping_match(Message, Username), Usernames),
+    list_to_set(Usernames, UsernamesUniq),
+    router(ping, Message, UsernamesUniq).
 
 process_message(Message) :-
     is_command(Message),
