@@ -7,5 +7,3 @@ get_ping_match(Message, Username) :-
     ping_match(ChatID, Username, Match),
     Message.get(message).get(chat).get(id) = ChatID,
     sub_string(Text, _, _, _, Match).
-
-

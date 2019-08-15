@@ -61,7 +61,7 @@ send_message(Text, MessageID, ChatID) :-
 router(command, Message) :-
     text_to_command(Message.get(message).get(text), Command, Args),
     command_to_name(Command, Name),
-    construct_functor(Name, [Args, Text], Functor),
+    construct_functor(Name, [Args, Message, Text], Functor),
     consult(commands),
     current_predicate(_, Functor),
     call(Functor),
