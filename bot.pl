@@ -54,9 +54,12 @@ log_print(Message, Text) :-
 
 send_message(Text, MessageID, ChatID) :-
     url("sendMessage", URL),
-    http_post(URL, form_data([ text = Text,
-                               reply_to_message_id = MessageID,
-                               chat_id = ChatID ]), _, []).
+    catch(
+        http_post(URL, form_data([ text = Text,
+                                   reply_to_message_id = MessageID,
+                                   chat_id = ChatID ]), _, []),
+        error(_, context(_, status(ErrorCode, Response))),
+        format("[ERROR] Couldn't send message: ~w - ~w~n", [ErrorCode, Response])).
 
 router(command, Message) :-
     text_to_command(Message.get(message).get(text), Command, Args),
