@@ -8,5 +8,5 @@ services:
       - ./token.pl:/app/token.pl:ro
       - ./pingers.pl:/app/pingers.pl:ro
       - ./ping_utils.pl:/app/ping_utils.pl:ro
-    restart: on-failure
+    restart: always
     command: swipl /app/bot.pl
