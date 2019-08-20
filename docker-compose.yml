@@ -4,5 +4,6 @@ services:
     image: swipl:8.1.8
     volumes:
       - ./bot:/app
+    working_dir: /app
     restart: always
-    command: swipl /app/bot.pl
+    command: swipl bot.pl

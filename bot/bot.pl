@@ -4,7 +4,7 @@
 :- use_module(library(clpfd)).
 
 ?- consult(token).
-?- consult(ping_utils).
+?- consult(utils).
 
 url(Command, URL) :-
     token(Token),
