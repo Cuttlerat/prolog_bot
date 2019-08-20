@@ -1,3 +1,6 @@
+:- use_module(library(http/http_header)).
+?- consult(commands_utils).
+
 %
 %! telegram_command_*(+Args:list, -Output:string) is det.
 % @arg Args is list of strings
@@ -5,9 +8,6 @@
 
 % Info command
 % @arg Output is info about the bot
-
-:- use_module(library(http/http_header)).
-?- consult(commands_utils).
 
 telegram_command_info(_, _, "OMG, I work somehow!\nPlease star me: https://github.com/Cuttlerat/prolog_bot").
 
