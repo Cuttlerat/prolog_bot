@@ -5,7 +5,9 @@
 
 % Info command
 % @arg Output is info about the bot
+
 :- use_module(library(http/http_header)).
+?- consult(commands_utils).
 
 telegram_command_info(_, _, "OMG, I work somehow!\nPlease star me: https://github.com/Cuttlerat/prolog_bot").
 
@@ -23,10 +25,6 @@ telegram_command_date([TimeStampStr], _, Date) :-
     number_string(TimeStamp, TimeStampStr),
     get_date(TimeStamp, Date).
 
-get_date(TimeStamp, Date) :-
-    http_timestamp(TimeStamp, Atom),
-    atom_string(Atom, Date).
-
 % Factorial command
 % @arg Args [Number]
 % @arg Number is string of int
@@ -42,33 +40,62 @@ telegram_command_factorial([Input], _, Output) :-
 
 telegram_command_factorial(_, _, "false.").
 
-factorial(X, Output) :- factorial(X, 1, Output).
-factorial(0, Output, Output) :- !.
-factorial(X, Y, Output) :-
-    X1 is X - 1,
-    Y1 is Y * X,
-    factorial(X1, Y1, Output).
+% Ping show command
+% @arg Args is a [] or [Username]
+% @arg Username is a username which matches should be shown
+% @arg Output is a message with matches or a message that there no matches
 
+telegram_command_ping_show([], Message, Output) :-
+    telegram_command_ping_show_(Message.get(message).get(from).get(username),
+                                Message,
+                                Output),
+    !.
+
+telegram_command_ping_show([Username], Message, Output) :-
+    telegram_command_ping_show_(Username, Message, Output),
+    !.
+
+telegram_command_ping_show(_, _, "Please enter only one username").
+
+telegram_command_ping_show_(UsernameArg, Message, Output) :-
+    ( string_concat("@", _, UsernameArg)
+    -> Username = UsernameArg
+    ; string_concat("@", UsernameArg, Username)
+    ),
+    ChatID = Message.get(message).get(chat).get(id),
+    findall(Match, ping_match(ChatID, Username, Match), Matches),
+    ( Matches = []
+    -> string_concat("No matches for ", Username, Output)
+    ; atomics_to_string(Matches, "\n", Output)
+    ),
+    !.
+
+% Ping add command
+% @arg Args is a list of strings with matches
+% @arg Output is a message with added matches or a message that there nothing to add
 
 telegram_command_ping_add(Matches, Message, Output) :-
     string_concat("@", Message.get(message).get(from).get(username), Username),
     ChatID = Message.get(message).get(chat).get(id),
     exclude(ping_match(ChatID, Username), Matches, NewMatches),
-    \+ NewMatches = [],
-    save_matches(ChatID, Username, NewMatches),
-    atomics_to_string(["Added matches:"|NewMatches], "\n", Output),
-    !.
+    maplist(assert_match(ChatID, Username), NewMatches),
+    save_matches,
+    ( NewMatches = []
+    -> Output = "Nothing to add"
+    ; atomics_to_string(["Added matches:"|NewMatches], "\n", Output)
+    ).
 
-telegram_command_ping_add(_, _, "Nothing to add") :- !.
+% Ping delete command
+% @arg Args is a list of strings with matches
+% @arg Output is a message with deleted matches or a message that there nothing to delete
 
-save_matches(_, _, []) :-
-    open('pingers.pl', write, S),
-    set_output(S),
-    listing(ping_phrase),
-    listing(ping_match),
-    close(S),
-    !.
-
-save_matches(ChatID, Username, [Match|Tail]) :-
-    assert(ping_match(ChatID, Username, Match)),
-    save_matches(ChatID, Username, Tail).
+telegram_command_ping_delete(Matches, Message, Output) :-
+    string_concat("@", Message.get(message).get(from).get(username), Username),
+    ChatID = Message.get(message).get(chat).get(id),
+    include(ping_match(ChatID, Username), Matches, FoundMatches),
+    maplist(retract_match(ChatID, Username), FoundMatches),
+    save_matches,
+    ( FoundMatches = []
+    -> Output = "Nothing to delete"
+    ; atomics_to_string(["Deleted matches:"|FoundMatches], "\n", Output)
+    ).
