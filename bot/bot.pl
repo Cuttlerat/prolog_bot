@@ -102,10 +102,6 @@ router(ping, Message, Usernames) :-
     !.
 
 process_message(Message) :-
-    update_offset(Message),
-    fail.
-
-process_message(Message) :-
     findall(Username, get_ping_match(Message, Username), Usernames),
     list_to_set(Usernames, UsernamesUniq),
     router(ping, Message, UsernamesUniq).
@@ -120,7 +116,10 @@ process_message(_).
 main :-
     repeat,
     get_updates(Data),
-    maplist(process_message, Data.get(result)),
+    Messages = Data.get(result),
+    last(Messages, LastMessage),
+    update_offset(LastMessage),
+    maplist(process_message, Messages),
     fail.
 
 ?- main.
