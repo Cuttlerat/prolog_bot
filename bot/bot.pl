@@ -52,6 +52,11 @@ log_print(Message, Text) :-
                              Message.get(message).get(chat).get(id),
                              Text]).
 
+
+send_message(location(Lat, Lon), MessageID, ChatID) :-
+    send_location(location(Lat, Lon), MessageID, ChatID),
+    !.
+
 send_message(Text, MessageID, ChatID) :-
     url("sendMessage", URL),
     catch(
@@ -60,6 +65,16 @@ send_message(Text, MessageID, ChatID) :-
                                    chat_id = ChatID ]), _, []),
         error(_, context(_, status(ErrorCode, Response))),
         format("[ERROR] Couldn't send message: ~w - ~w~n", [ErrorCode, Response])).
+
+send_location(location(Lat, Lon), MessageID, ChatID) :-
+    url("sendLocation", URL),
+    catch(
+        http_post(URL, form_data([ latitude = Lat,
+                                   longitude = Lon,
+                                   reply_to_message_id = MessageID,
+                                   chat_id = ChatID ]), _, []),
+        error(_, context(_, status(ErrorCode, Response))),
+        format("[ERROR] Couldn't send location: ~w - ~w~n", [ErrorCode, Response])).
 
 router(command, Message) :-
     text_to_command(Message.get(message).get(text), Command, Args),

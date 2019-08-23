@@ -1,3 +1,7 @@
+:- use_module(library(http/http_open)).
+:- use_module(library(http/http_client)).
+:- use_module(library(http/json)).
+:- use_module(library(url)).
 ?- consult(utils).
 
 %
@@ -100,3 +104,31 @@ telegram_command_ping_delete(Matches, Message, Output) :-
     -> Output = "Nothing to delete"
     ; atomics_to_string(["Deleted matches:"|FoundMatches], "\n", Output)
     ).
+
+% Ping Location command
+% @arg Args is a list of strings with a human readable location
+% @arg Location is a location(Lat, Lon)
+
+telegram_command_location([], _, Output) :-
+    Output = "Please enter location like /location Moscow",
+    !.
+
+telegram_command_location(Args, _, Location) :-
+    atomics_to_string(Args, " ", TextLocation),
+    www_form_encode(TextLocation, TextLocEncoded),
+    atomics_to_string(["https://geocode-maps.yandex.ru/1.x/?format=json&geocode=", TextLocEncoded], "", URL),
+    setup_call_cleanup(
+        http_open(URL, In, [request_header('Accept'='application/json')]),
+        json_read_dict(In, Data),
+        close(In)
+    ),
+    Results = Data.get(response).get('GeoObjectCollection').get(featureMember),
+    Results = [FirstResult|_],
+    Point = FirstResult.get('GeoObject').get('Point').get(pos),
+    atomics_to_string(LonLat, " ", Point),
+    LonLat = [Lon, Lat],
+    Location = location(Lat, Lon),
+    !.
+
+telegram_command_location(Args, _, Output) :-
+    atomics_to_string(["Could not find location: "|Args], " ", Output).
