@@ -87,7 +87,8 @@ router(command, Message) :-
         Message.get(message).get(message_id),
         Message.get(message).get(chat).get(id)),
     atomics_to_string([Command|Args], " ", Log),
-    log_print(Message, Log).
+    log_print(Message, Log),
+    !.
 
 router(ping, _, []) :- !.
 router(ping, Message, Usernames) :-
@@ -103,19 +104,20 @@ router(ping, Message, Usernames) :-
 
 process_message(Message) :-
     update_offset(Message),
-    fail.
-
-process_message(Message) :-
     findall(Username, get_ping_match(Message, Username), Usernames),
     list_to_set(Usernames, UsernamesUniq),
-    router(ping, Message, UsernamesUniq).
+    router(ping, Message, UsernamesUniq),
+    !.
 
 process_message(Message) :-
+    update_offset(Message),
     is_command(Message),
     router(command, Message),
     !.
 
-process_message(_).
+process_message(Message) :-
+    update_offset(Message),
+    !.
 
 main :-
     repeat,
