@@ -1,7 +1,3 @@
-:- use_module(library(http/http_open)).
-:- use_module(library(http/http_client)).
-:- use_module(library(http/json)).
-:- use_module(library(url)).
 ?- consult(utils).
 
 %
@@ -115,18 +111,12 @@ telegram_command_location([], _, Output) :-
 
 telegram_command_location(Args, _, Location) :-
     atomics_to_string(Args, " ", TextLocation),
-    www_form_encode(TextLocation, TextLocEncoded),
-    atomics_to_string(["https://geocode-maps.yandex.ru/1.x/?format=json&geocode=", TextLocEncoded], "", URL),
-    setup_call_cleanup(
-        http_open(URL, In, [request_header('Accept'='application/json')]),
-        json_read_dict(In, Data),
-        close(In)
-    ),
-    Results = Data.get(response).get('GeoObjectCollection').get(featureMember),
+    get_locations_from_yandex(TextLocation, Locations),
+    Results = Locations.get(response).get('GeoObjectCollection').get(featureMember),
     Results = [FirstResult|_],
     Point = FirstResult.get('GeoObject').get('Point').get(pos),
-    atomics_to_string(LonLat, " ", Point),
-    LonLat = [Lon, Lat],
+    atomics_to_string(Coordinates, " ", Point),
+    Coordinates = [Lon, Lat],
     Location = location(Lat, Lon),
     !.
 

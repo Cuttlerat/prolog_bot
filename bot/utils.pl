@@ -1,3 +1,7 @@
+:- use_module(library(http/http_open)).
+:- use_module(library(http/http_client)).
+:- use_module(library(http/json)).
+:- use_module(library(url)).
 :- use_module(library(http/http_header)).
 :- dynamic ping_match/3.
 
@@ -73,3 +77,13 @@ strip_chars(String, [H|Exclude], Result) :-
     split_string(String, H, "", StrippedList),
     atomics_to_string(StrippedList, Result1),
     strip_chars(Result1, Exclude, Result).
+
+% telegram_command_location
+get_locations_from_yandex(Location, Response) :-
+    www_form_encode(Location, TextLocEncoded),
+    atomics_to_string(["https://geocode-maps.yandex.ru/1.x/?format=json&geocode=", TextLocEncoded], "", URL),
+    setup_call_cleanup(
+        http_open(URL, In, [request_header('Accept'='application/json')]),
+        json_read_dict(In, Response),
+        close(In)
+    ).
