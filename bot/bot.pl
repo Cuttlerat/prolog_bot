@@ -101,14 +101,16 @@ router(ping, Message, Usernames) :-
     log_print(Message, Log),
     !.
 
-process_message(Message) :-
-    findall(Username, get_ping_match(Message, Username), Usernames),
-    list_to_set(Usernames, UsernamesUniq),
-    router(ping, Message, UsernamesUniq).
 
 process_message(Message) :-
     is_command(Message),
     router(command, Message),
+    !.
+
+process_message(Message) :-
+    findall(Username, get_ping_match(Message, Username), Usernames),
+    list_to_set(Usernames, UsernamesUniq),
+    router(ping, Message, UsernamesUniq),
     !.
 
 process_message(_).
