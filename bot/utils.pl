@@ -82,8 +82,15 @@ strip_chars(String, [H|Exclude], Result) :-
 get_locations_from_yandex(Location, Response) :-
     www_form_encode(Location, TextLocEncoded),
     atomics_to_string(["https://geocode-maps.yandex.ru/1.x/?format=json&geocode=", TextLocEncoded], "", URL),
-    setup_call_cleanup(
-        http_open(URL, In, [request_header('Accept'='application/json')]),
-        json_read_dict(In, Response),
-        close(In)
-    ).
+    catch(
+        setup_call_cleanup(
+            http_open(URL, In, [request_header('Accept'='application/json')]),
+            json_read_dict(In, Response),
+            close(In)
+        ),
+        error(_, _),
+        fail
+    ),
+    !.
+
+get_locations_from_yandex(_, _{}).
