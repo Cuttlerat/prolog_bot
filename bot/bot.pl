@@ -34,17 +34,6 @@ text_to_command(Message, Command, Args) :-
     split_string(Message, " ", " ", [CommandTmp|Args]),
     split_string(CommandTmp, "@", "/", [Command|_]).
 
-construct_functor(Name, Args, Functor) :-
-    length(Args, Arity),
-    functor(Functor, Name, Arity),
-    construct_functor_(Name, Args, Functor, Arity, 0).
-
-construct_functor_(_, [], _, X, X) :- !.
-construct_functor_(Name, [Arg|Args], Functor, Arity, ArgNumber) :-
-    ArgNumber1 is ArgNumber + 1,
-    arg(ArgNumber1, Functor, Arg),
-    construct_functor_(Name, Args, Functor, Arity, ArgNumber1).
-
 log_print(Message, Text) :-
     get_time(TimeStamp),
     round(TimeStamp, UnixTimeStamp),
@@ -79,7 +68,7 @@ send_location(location(Lat, Lon), MessageID, ChatID) :-
 router(command, Message) :-
     text_to_command(Message.get(message).get(text), Command, Args),
     command_to_name(Command, Name),
-    construct_functor(Name, [Args, Message, Text], Functor),
+    Functor =.. [Name, Args, Message, Text],
     consult(commands),
     current_predicate(_, Functor),
     call(Functor),
