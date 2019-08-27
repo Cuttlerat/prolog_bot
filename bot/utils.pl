@@ -4,7 +4,7 @@
 :- use_module(library(url)).
 :- use_module(library(http/http_header)).
 :- dynamic ping_match/3.
-:- dynamic ping_me/3.
+:- dynamic me/3.
 
 url(Command, URL) :-
     token(Token),
