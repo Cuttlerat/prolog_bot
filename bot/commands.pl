@@ -122,3 +122,24 @@ telegram_command_location(Args, _, Location) :-
 
 telegram_command_location(Args, _, Output) :-
     atomics_to_string(["Could not find location: "|Args], " ", Output).
+
+telegram_command_set_me([], _, "Please define your name.") :- !.
+
+telegram_command_set_me(Args, Message, Output) :-
+    UserID = Message.get(message).get(from).get(id),
+    ChatID = Message.get(message).get(chat).get(id),
+    atomics_to_string(Args, " ", Match),
+    update_me(ChatID, UserID, Match),
+    format(atom(Output), "Now I'll call you ~s", [Match]).
+
+telegram_command_me(Args, Message, Output) :-
+    UserID = Message.get(message).get(from).get(id),
+    ChatID = Message.get(message).get(chat).get(id),
+    consult(pingers),
+    me(ChatID, UserID, Match),
+    capitalize(Match, CapitalizedMatch),
+    delete_message(Message),
+    atomics_to_string([CapitalizedMatch|Args], " ", Output),
+    !.
+
+telegram_command_me(_, _, "Please add a 'me' cast for yourself with a /set_me command").

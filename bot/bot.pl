@@ -6,41 +6,15 @@
 ?- consult(token).
 ?- consult(utils).
 
-url(Command, URL) :-
-    token(Token),
-    atomics_to_string(["https://api.telegram.org/bot", Token, "/", Command], URL).
 
-get_updates(Data) :-
-    url("getUpdates", URL),
-    setup_call_cleanup(
-        http_open(URL, In, [request_header('Accept'='application/json')]),
-        json_read_dict(In, Data),
-        close(In)
+send_no_reply_message(Text, ChatID) :-
+    url("sendMessage", URL),
+    catch(
+        http_post(URL, form_data([ text = Text,
+                                   chat_id = ChatID ]), _, []),
+        error(_, context(_, status(ErrorCode, Response))),
+        format("[ERROR] Couldn't send message w/o reply: ~w - ~w~n", [ErrorCode, Response])
     ).
-
-update_offset(Message) :-
-    url("getUpdates", URL),
-    NewOffset is Message.get(update_id) + 1,
-    http_post(URL, form_data([offset = NewOffset]), _, []).
-
-is_command(Message) :-
-    [Entity|_] = Message.get(message).get(entities),
-    Entity.get(type) = "bot_command".
-
-command_to_name(Command, Name) :-
-    atomic_concat("telegram_command_", Command, Name).
-
-text_to_command(Message, Command, Args) :-
-    split_string(Message, " ", " ", [CommandTmp|Args]),
-    split_string(CommandTmp, "@", "/", [Command|_]).
-
-log_print(Message, Text) :-
-    get_time(TimeStamp),
-    round(TimeStamp, UnixTimeStamp),
-    format('[~d] ~d: ~s~n', [UnixTimeStamp,
-                             Message.get(message).get(chat).get(id),
-                             Text]).
-
 
 send_message(location(Lat, Lon), MessageID, ChatID) :-
     send_location(location(Lat, Lon), MessageID, ChatID),
@@ -52,8 +26,9 @@ send_message(Text, MessageID, ChatID) :-
         http_post(URL, form_data([ text = Text,
                                    reply_to_message_id = MessageID,
                                    chat_id = ChatID ]), _, []),
-        error(_, context(_, status(ErrorCode, Response))),
-        format("[ERROR] Couldn't send message: ~w - ~w~n", [ErrorCode, Response])).
+        error(_, context(_, status(_, _))),
+        send_no_reply_message(Text, ChatID)
+    ).
 
 send_location(location(Lat, Lon), MessageID, ChatID) :-
     url("sendLocation", URL),
@@ -63,7 +38,8 @@ send_location(location(Lat, Lon), MessageID, ChatID) :-
                                    reply_to_message_id = MessageID,
                                    chat_id = ChatID ]), _, []),
         error(_, context(_, status(ErrorCode, Response))),
-        format("[ERROR] Couldn't send location: ~w - ~w~n", [ErrorCode, Response])).
+        format("[ERROR] Couldn't send location: ~w - ~w~n", [ErrorCode, Response])
+    ).
 
 router(command, Message) :-
     text_to_command(Message.get(message).get(text), Command, Args),

@@ -4,6 +4,42 @@
 :- use_module(library(url)).
 :- use_module(library(http/http_header)).
 :- dynamic ping_match/3.
+:- dynamic ping_me/3.
+
+url(Command, URL) :-
+    token(Token),
+    atomics_to_string(["https://api.telegram.org/bot", Token, "/", Command], URL).
+
+get_updates(Data) :-
+    url("getUpdates", URL),
+    setup_call_cleanup(
+        http_open(URL, In, [request_header('Accept'='application/json')]),
+        json_read_dict(In, Data),
+        close(In)
+    ).
+
+update_offset(Message) :-
+    url("getUpdates", URL),
+    NewOffset is Message.get(update_id) + 1,
+    http_post(URL, form_data([offset = NewOffset]), _, []).
+
+is_command(Message) :-
+    [Entity|_] = Message.get(message).get(entities),
+    Entity.get(type) = "bot_command".
+
+command_to_name(Command, Name) :-
+    atomic_concat("telegram_command_", Command, Name).
+
+text_to_command(Message, Command, Args) :-
+    split_string(Message, " ", " ", [CommandTmp|Args]),
+    split_string(CommandTmp, "@", "/", [Command|_]).
+
+log_print(Message, Text) :-
+    get_time(TimeStamp),
+    round(TimeStamp, UnixTimeStamp),
+    format('[~d] ~d: ~s~n', [UnixTimeStamp,
+                             Message.get(message).get(chat).get(id),
+                             Text]).
 
 % telegram_command_date
 get_date(TimeStamp, Date) :-
@@ -25,6 +61,7 @@ save_matches :-
     set_output(S),
     listing(ping_phrase),
     listing(ping_match),
+    listing(me),
     close(S).
 
 % telegram_command_ping_add
@@ -94,3 +131,39 @@ get_locations_from_yandex(Location, Response) :-
     !.
 
 get_locations_from_yandex(_, _{}).
+
+
+% telegram_command_set_me
+update_me(ChatID, UserID, Match) :-
+    me(ChatID, UserID, Match),
+    !.
+
+update_me(ChatID, UserID, Match) :-
+    me(ChatID, UserID, _),
+    retract(me(ChatID, UserID, _)),
+    assert(me(ChatID, UserID, Match)),
+    save_matches,
+    !.
+
+update_me(ChatID, UserID, Match) :-
+    assert(me(ChatID, UserID, Match)),
+    save_matches.
+
+
+% telegram_command_me
+delete_message(Message) :-
+    MessageID = Message.get(message).get(message_id),
+    ChatID = Message.get(message).get(chat).get(id),
+    url("deleteMessage", URL),
+    catch(
+        http_post(URL, form_data([ message_id = MessageID,
+                                   chat_id = ChatID ]), _, []),
+        error(_, context(_, status(ErrorCode, Response))),
+        format("[ERROR] Couldn't delete message: ~w - ~w~n", [ErrorCode, Response])
+    ).
+
+capitalize(Text, Capitalized) :-
+    string_chars(Text, [H|T]),
+    upcase_atom(H, H1),
+    string_chars(Capitalized, [H1|T]).
+
