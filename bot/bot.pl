@@ -5,6 +5,7 @@
 
 ?- consult(token).
 ?- consult(utils).
+?- consult(pingers).
 
 send_message(location(Lat, Lon), MessageID, ChatID) :-
     send_location(location(Lat, Lon), MessageID, ChatID),
