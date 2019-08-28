@@ -5,7 +5,6 @@
 :- use_module(library(http/http_header)).
 :- use_module(library(pcre)).
 :- dynamic ping_match/3.
-:- dynamic ping_phrase/1.
 :- dynamic me/3.
 ?- consult(emoji).
 
