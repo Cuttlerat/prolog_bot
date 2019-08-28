@@ -6,28 +6,35 @@
 ?- consult(token).
 ?- consult(utils).
 
-
-send_no_reply_message(Text, ChatID) :-
-    url("sendMessage", URL),
-    catch(
-        http_post(URL, form_data([ text = Text,
-                                   chat_id = ChatID ]), _, []),
-        error(_, context(_, status(ErrorCode, Response))),
-        format("[ERROR] Couldn't send message w/o reply: ~w - ~w~n", [ErrorCode, Response])
-    ).
-
 send_message(location(Lat, Lon), MessageID, ChatID) :-
     send_location(location(Lat, Lon), MessageID, ChatID),
     !.
 
 send_message(Text, MessageID, ChatID) :-
+    string(Text),
+    send_message(reply(Text), MessageID, ChatID),
+    !.
+
+send_message(reply(Text), MessageID, ChatID) :-
     url("sendMessage", URL),
+    replace_emoji(Text, EmojiText),
     catch(
-        http_post(URL, form_data([ text = Text,
+        http_post(URL, form_data([ text = EmojiText,
                                    reply_to_message_id = MessageID,
                                    chat_id = ChatID ]), _, []),
         error(_, context(_, status(_, _))),
-        send_no_reply_message(Text, ChatID)
+        send_message(no_reply(Text), _, ChatID)
+    ),
+    !.
+
+send_message(no_reply(Text), _, ChatID) :-
+    url("sendMessage", URL),
+    replace_emoji(Text, EmojiText),
+    catch(
+        http_post(URL, form_data([ text = EmojiText,
+                                   chat_id = ChatID ]), _, []),
+        error(_, context(_, status(ErrorCode, Response))),
+        format("[ERROR] Couldn't send message w/o reply: ~w - ~w~n", [ErrorCode, Response])
     ).
 
 send_location(location(Lat, Lon), MessageID, ChatID) :-
@@ -44,11 +51,11 @@ send_location(location(Lat, Lon), MessageID, ChatID) :-
 router(command, Message) :-
     text_to_command(Message.get(message).get(text), Command, Args),
     command_to_name(Command, Name),
-    Functor =.. [Name, Args, Message, Text],
+    Functor =.. [Name, Args, Message, Output],
     consult(commands),
     current_predicate(_, Functor),
     call(Functor),
-    send_message(Text,
+    send_message(Output,
         Message.get(message).get(message_id),
         Message.get(message).get(chat).get(id)),
     atomics_to_string([Command|Args], " ", Log),
@@ -57,7 +64,7 @@ router(command, Message) :-
 router(ping, _, []) :- !.
 router(ping, Message, Usernames) :-
     atomics_to_string(Usernames, " ", Text),
-    send_message(Text,
+    send_message(reply(Text),
         Message.get(message).get(message_id),
         Message.get(message).get(chat).get(id)),
     atomics_to_string(["Ping by",

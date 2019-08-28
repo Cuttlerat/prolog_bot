@@ -130,9 +130,9 @@ telegram_command_set_me(Args, Message, Output) :-
     ChatID = Message.get(message).get(chat).get(id),
     atomics_to_string(Args, " ", Match),
     update_me(ChatID, UserID, Match),
-    format(atom(Output), "Now I'll call you ~s", [Match]).
+    format(string(Output), "Now I'll call you ~s", [Match]).
 
-telegram_command_me(Args, Message, Output) :-
+telegram_command_me(Args, Message, no_reply(Output)) :-
     UserID = Message.get(message).get(from).get(id),
     ChatID = Message.get(message).get(chat).get(id),
     consult(pingers),

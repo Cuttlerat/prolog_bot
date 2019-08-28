@@ -3,8 +3,11 @@
 :- use_module(library(http/json)).
 :- use_module(library(url)).
 :- use_module(library(http/http_header)).
+:- use_module(library(pcre)).
 :- dynamic ping_match/3.
+:- dynamic ping_phrase/1.
 :- dynamic me/3.
+?- consult(emoji).
 
 url(Command, URL) :-
     token(Token),
@@ -37,9 +40,10 @@ text_to_command(Message, Command, Args) :-
 log_print(Message, Text) :-
     get_time(TimeStamp),
     round(TimeStamp, UnixTimeStamp),
+    replace_emoji(Text, EmojiText),
     format('[~d] ~d: ~s~n', [UnixTimeStamp,
                              Message.get(message).get(chat).get(id),
-                             Text]).
+                             EmojiText]).
 
 % telegram_command_date
 get_date(TimeStamp, Date) :-
@@ -167,3 +171,17 @@ capitalize(Text, Capitalized) :-
     upcase_atom(H, H1),
     string_chars(Capitalized, [H1|T]).
 
+
+replace_emoji(Text, Text) :-
+    not(re_match("\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]", Text)),
+    !.
+
+replace_emoji(Text, Output) :-
+    string_concat(A, B, Text),
+    string_concat(X, C, B),
+    re_match("^(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])$", X),
+    emoji(Emoji, X),
+    string_concat(A, Emoji, Head),
+    replace_emoji(C, Tail),
+    string_concat(Head, Tail, Output),
+    !.
