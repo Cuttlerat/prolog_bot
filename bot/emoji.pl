@@ -6,7 +6,7 @@ emoji("😆", "\uD83D\uDE06") :- !.
 emoji("😅", "\uD83D\uDE05") :- !.
 emoji("😂", "\uD83D\uDE02") :- !.
 emoji("🤣", "\uD83E\uDD23") :- !.
-emoji("🧐", "\UD83E\UDDD0") :- !.
+emoji("🧐", "\uD83E\uDDD0") :- !.
 emoji("☺️", "\u263A\uFE0F") :- !.
 emoji("😊", "\uD83D\uDE0A") :- !.
 emoji("😇", "\uD83D\uDE07") :- !.
