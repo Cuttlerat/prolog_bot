@@ -32,6 +32,7 @@ telegram_command_date([TimeStampStr], _, Date) :-
 telegram_command_factorial([Input], _, Output) :-
     number_string(XNumber, Input),
     Number is round(XNumber),
+    % Telegram cannot handle factorial of the number greater than 1494 in one message
     between(0, 1494, Number),
     factorial(Number, Factorial),
     number_string(Factorial, Output),
@@ -45,9 +46,11 @@ telegram_command_factorial(_, _, "false.").
 % @arg Output is a message with matches or a message that there no matches
 
 telegram_command_ping_show([], Message, Output) :-
-    telegram_command_ping_show_(Message.get(message).get(from).get(username),
-                                Message,
-                                Output),
+    telegram_command_ping_show_(
+        Message.get(message).get(from).get(username),
+        Message,
+        Output
+    ),
     !.
 
 telegram_command_ping_show([Username], Message, Output) :-
@@ -101,7 +104,7 @@ telegram_command_ping_delete(Matches, Message, Output) :-
     ; atomics_to_string(["Deleted matches:"|FoundMatches], "\n", Output)
     ).
 
-% Ping Location command
+% Location command
 % @arg Args is a list of strings with a human readable location
 % @arg Location is a location(Lat, Lon)
 
@@ -123,6 +126,11 @@ telegram_command_location(Args, _, Location) :-
 telegram_command_location(Args, _, Output) :-
     atomics_to_string(["Could not find location: "|Args], " ", Output).
 
+% Set me command
+% @arg Args is a list of strings with a username 'me' name
+% This command saves a string from Args as a 'me' name in database
+% 'me' name uses for telegram_command_me
+
 telegram_command_set_me([], _, "Please define your name.") :- !.
 
 telegram_command_set_me(Args, Message, Output) :-
@@ -131,6 +139,10 @@ telegram_command_set_me(Args, Message, Output) :-
     atomics_to_string(Args, " ", Match),
     update_me(ChatID, UserID, Match),
     format(string(Output), "Now I'll call you ~s", [Match]).
+
+% Me command
+% @arg Args is a list of strings with a text
+% This command replaces the user's message with a 'me' name + text from Args
 
 telegram_command_me(Args, Message, no_reply(Output)) :-
     UserID = Message.get(message).get(from).get(id),
@@ -142,4 +154,4 @@ telegram_command_me(Args, Message, no_reply(Output)) :-
     atomics_to_string([CapitalizedMatch|Args], " ", Output),
     !.
 
-telegram_command_me(_, _, "Please add a 'me' cast for yourself with a /set_me command").
+telegram_command_me(_, _, "Please add a 'me' cast for yourself by /set_me command").

@@ -14,8 +14,9 @@ url(Command, URL) :-
 
 get_updates(Data) :-
     url("getUpdates", URL),
+    Headers = [request_header('Accept'='application/json')]
     setup_call_cleanup(
-        http_open(URL, In, [request_header('Accept'='application/json')]),
+        http_open(URL, In, Headers),
         json_read_dict(In, Data),
         close(In)
     ).
@@ -23,14 +24,15 @@ get_updates(Data) :-
 update_offset(Message) :-
     url("getUpdates", URL),
     NewOffset is Message.get(update_id) + 1,
-    http_post(URL, form_data([offset = NewOffset]), _, []).
+    catch(
+        http_post(URL, form_data([offset = NewOffset]), _, []),
+        error(_, context(_, status(ErrorCode, Response))),
+        format("[ERROR] Couldn't update offset: ~w - ~w~n", [ErrorCode, Response])
+    ).
 
 is_command(Message) :-
     [Entity|_] = Message.get(message).get(entities),
     Entity.get(type) = "bot_command".
-
-command_to_name(Command, Name) :-
-    atomic_concat("telegram_command_", Command, Name).
 
 text_to_command(Message, Command, Args) :-
     split_string(Message, " ", " ", [CommandTmp|Args]),
@@ -40,9 +42,11 @@ log_print(Message, Text) :-
     get_time(TimeStamp),
     round(TimeStamp, UnixTimeStamp),
     replace_emoji(Text, EmojiText),
-    format('[~d] ~d: ~s~n', [UnixTimeStamp,
-                             Message.get(message).get(chat).get(id),
-                             EmojiText]).
+    format('[INFO] [~d] ~d: ~s~n', [ 
+            UnixTimeStamp,
+            Message.get(message).get(chat).get(id),
+            EmojiText ]
+    ).
 
 % telegram_command_date
 get_date(TimeStamp, Date) :-
@@ -98,17 +102,17 @@ unify_match(In, Out) :-
     string_lower(In, Tmp),
     replace("ё", "е", Tmp, Out).
 
-% router
+% ping
 get_ping_match(Message, Username) :-
-    string_lower(Message.get(message).get(text), Text),
+    ChatID = Message.get(message).get(chat).get(id),
+    MessageText = Message.get(message).get(text),
+    unify_match(MessageText, TextUnified),
+    strip_chars(TextUnified, [",", ".", ";", ":", "!", "?"], TextStripped),
+    split_string(TextStripped, " ", " ", TextSplitted),
     consult(pingers),
     ping_phrase(PingPhrase),
-    strip_chars(Text, [",", ".", ";", ":", "!", "?"], TextStripped),
-    replace("ё", "е", TextStripped, TextUnified),
-    split_string(TextUnified, " ", " ", TextSplitted),
     member(PingPhrase, TextSplitted),
     ping_match(ChatID, Username, Match),
-    Message.get(message).get(chat).get(id) = ChatID,
     member(Match, TextSplitted).
 
 % get_ping_match
@@ -121,7 +125,8 @@ strip_chars(String, [H|Exclude], Result) :-
 % telegram_command_location
 get_locations_from_yandex(Location, Response) :-
     www_form_encode(Location, TextLocEncoded),
-    atomics_to_string(["https://geocode-maps.yandex.ru/1.x/?format=json&geocode=", TextLocEncoded], "", URL),
+    YandexMapURL = "https://geocode-maps.yandex.ru/1.x/?format=json&geocode=",
+    atomics_to_string([YandexMapURL, TextLocEncoded], "", URL),
     catch(
         setup_call_cleanup(
             http_open(URL, In, [request_header('Accept'='application/json')]),
@@ -129,6 +134,7 @@ get_locations_from_yandex(Location, Response) :-
             close(In)
         ),
         error(_, _),
+        % TODO: Try Response = _{}
         fail
     ),
     !.
