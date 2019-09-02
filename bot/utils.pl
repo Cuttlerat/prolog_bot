@@ -133,10 +133,21 @@ sort_matches(ChatID, Username) :-
     ),
     keysort(Matches, Sorted),
     reverse(Sorted, RevSorted),
+
     forall(member(_-XMatch, Matches),
           retract_match(ChatID, Username, XMatch)),
-    forall(member(SRating-SMatch, RevSorted),
-          assert_match(ChatID, Username, SRating, SMatch)),
+
+    findall(RevRate, member(RevRate-_, RevSorted), RevRates),
+    list_to_set(RevRates, SetRates),
+    forall(member(SRate, SetRates),
+        (
+            findall(UMatch, member(SRate-UMatch, RevSorted), MatchesUnsorted),
+            sort(MatchesUnsorted, MatchesSorted),
+            forall(member(SMatch, MatchesSorted),
+                assert_match(ChatID, Username, SRate, SMatch))
+        )
+    ),
+
     save_matches.
 
 
