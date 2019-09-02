@@ -3,9 +3,9 @@
 :- use_module(library(http/json)).
 :- use_module(library(clpfd)).
 
-?- consult(token).
+?- consult('db/token').
+?- consult('db/pingers').
 ?- consult(utils).
-?- consult(pingers).
 
 
 send_message(Text, MessageID, ChatID) :-
@@ -40,7 +40,10 @@ send_message(no_reply(Text), _, ChatID) :-
             ]), _, []
         ),
         error(_, context(_, status(ErrorCode, Response))),
-        format("[ERROR] Couldn't send message w/o reply: ~w - ~w~n", [ErrorCode, Response])
+        (
+            format(string(Log), "Couldn't send message: ~w - ~w", [ErrorCode, Response]),
+            log_print(log_level('ERROR'), Log)
+        )
     ).
 
 send_message(location(Lat, Lon), MessageID, ChatID) :-
@@ -55,12 +58,15 @@ send_message(location(Lat, Lon), MessageID, ChatID) :-
             ]), _, []
         ),
         error(_, context(_, status(ErrorCode, Response))),
-        format("[ERROR] Couldn't send location: ~w - ~w~n", [ErrorCode, Response])
+        (
+            format(string(Log), "Couldn't send location: ~w - ~w", [ErrorCode, Response]),
+            log_print(log_level('ERROR'), Log)
+        )
     ).
 
 bot_command(Message) :-
     text_to_command(Message.get(message).get(text), Command, Args),
-    atomic_concat("telegram_command_", Command, BotCommand).
+    atomic_concat("telegram_command_", Command, BotCommand),
     Functor =.. [BotCommand, Args, Message, Output],
     consult(commands),
     current_predicate(_, Functor),
@@ -68,8 +74,8 @@ bot_command(Message) :-
     send_message(Output,
         Message.get(message).get(message_id),
         Message.get(message).get(chat).get(id)),
-    atomics_to_string([Command|Args], " ", Log),
-    log_print(Message, Log).
+    atomics_to_string([BotCommand|Args], " ", Log),
+    log_print(log_level('INFO'), Log).
 
 ping(_, []) :- !.
 
@@ -81,7 +87,7 @@ ping(Message, Usernames) :-
     atomics_to_string(["Ping by",
          Message.get(message).get(from).get(username),
          "to", Text], " ", Log),
-    log_print(Message, Log),
+    log_print(log_level('INFO'), Log),
     !.
 
 
@@ -101,6 +107,7 @@ process_message(_).
 
 
 main :-
+    log_print(log_level('INFO'), "Started"),
     repeat,
     get_updates(Data),
     Messages = Data.get(result),

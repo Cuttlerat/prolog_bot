@@ -6,7 +6,7 @@
 :- use_module(library(pcre)).
 :- dynamic ping_match/3.
 :- dynamic me/3.
-?- consult(emoji).
+?- consult('db/emoji').
 
 url(Command, URL) :-
     token(Token),
@@ -14,7 +14,7 @@ url(Command, URL) :-
 
 get_updates(Data) :-
     url("getUpdates", URL),
-    Headers = [request_header('Accept'='application/json')]
+    Headers = [request_header('Accept'='application/json')],
     setup_call_cleanup(
         http_open(URL, In, Headers),
         json_read_dict(In, Data),
@@ -27,7 +27,10 @@ update_offset(Message) :-
     catch(
         http_post(URL, form_data([offset = NewOffset]), _, []),
         error(_, context(_, status(ErrorCode, Response))),
-        format("[ERROR] Couldn't update offset: ~w - ~w~n", [ErrorCode, Response])
+        (
+            format(string(Log), "Couldn't update offset: ~w - ~w", [ErrorCode, Response]),
+            log_print(log_level('ERROR'), Log)
+        )
     ).
 
 is_command(Message) :-
@@ -38,15 +41,12 @@ text_to_command(Message, Command, Args) :-
     split_string(Message, " ", " ", [CommandTmp|Args]),
     split_string(CommandTmp, "@", "/", [Command|_]).
 
-log_print(Message, Text) :-
+log_print(log_level(LogLevel), Text) :-
     get_time(TimeStamp),
     round(TimeStamp, UnixTimeStamp),
     replace_emoji(Text, EmojiText),
-    format('[INFO] [~d] ~d: ~s~n', [ 
-            UnixTimeStamp,
-            Message.get(message).get(chat).get(id),
-            EmojiText ]
-    ).
+    current_output(Out),
+    format(Out, '[~d] [~s] ~s~n', [UnixTimeStamp, LogLevel, EmojiText]).
 
 % telegram_command_date
 get_date(TimeStamp, Date) :-
@@ -64,7 +64,7 @@ factorial(X, Y, Output) :-
 % telegram_command_ping_add
 % telegram_command_ping_delete
 save_matches :-
-    open('pingers.pl', write, S),
+    open('db/pingers.pl', write, S),
     set_output(S),
     listing(ping_phrase),
     listing(ping_match),
@@ -109,7 +109,7 @@ get_ping_match(Message, Username) :-
     unify_match(MessageText, TextUnified),
     strip_chars(TextUnified, [",", ".", ";", ":", "!", "?"], TextStripped),
     split_string(TextStripped, " ", " ", TextSplitted),
-    consult(pingers),
+    consult('db/pingers'),
     ping_phrase(PingPhrase),
     member(PingPhrase, TextSplitted),
     ping_match(ChatID, Username, Match),
@@ -134,12 +134,9 @@ get_locations_from_yandex(Location, Response) :-
             close(In)
         ),
         error(_, _),
-        % TODO: Try Response = _{}
-        fail
+        Response = _{}
     ),
     !.
-
-get_locations_from_yandex(_, _{}).
 
 
 % telegram_command_set_me
@@ -168,7 +165,10 @@ delete_message(Message) :-
         http_post(URL, form_data([ message_id = MessageID,
                                    chat_id = ChatID ]), _, []),
         error(_, context(_, status(ErrorCode, Response))),
-        format("[ERROR] Couldn't delete message: ~w - ~w~n", [ErrorCode, Response])
+        (
+            format(string(Log), "Couldn't delete message: ~w - ~w", [ErrorCode, Response]),
+            log_print(log_level('ERROR'), Log)
+        )
     ).
 
 capitalize(Text, Capitalized) :-
@@ -176,6 +176,23 @@ capitalize(Text, Capitalized) :-
     upcase_atom(H, H1),
     string_chars(Capitalized, [H1|T]).
 
+convert_emoji(Text, Emoji) :-
+    atom_codes(Text, TextCodes),
+    convert_emoji_(TextCodes, EmojiCodes),
+    string_codes(Emoji, EmojiCodes).
+
+convert_emoji_([], []) :- !.
+
+convert_emoji_([H,L|T], [Z|T1]) :-
+    H >= 55296, H =< 56319,
+    L >= 56320, L =< 57343,
+    Z is 65536+(H-55296)*1024+(L-56320),
+    convert_emoji_(T, T1),
+    !.
+
+convert_emoji_([H|T], [H|T1]) :-
+    convert_emoji_(T, T1),
+    !.
 
 replace_emoji(Text, Text) :-
     not(re_match("\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]", Text)),
@@ -185,7 +202,7 @@ replace_emoji(Text, Output) :-
     string_concat(A, B, Text),
     string_concat(X, C, B),
     re_match("^(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])$", X),
-    emoji(Emoji, X),
+    convert_emoji(X, Emoji),
     string_concat(A, Emoji, Head),
     replace_emoji(C, Tail),
     string_concat(Head, Tail, Output),

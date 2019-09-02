@@ -147,7 +147,7 @@ telegram_command_set_me(Args, Message, Output) :-
 telegram_command_me(Args, Message, no_reply(Output)) :-
     UserID = Message.get(message).get(from).get(id),
     ChatID = Message.get(message).get(chat).get(id),
-    consult(pingers),
+    consult('db/pingers'),
     me(ChatID, UserID, Match),
     capitalize(Match, CapitalizedMatch),
     delete_message(Message),
