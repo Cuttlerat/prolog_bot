@@ -4,7 +4,7 @@
 :- use_module(library(url)).
 :- use_module(library(http/http_header)).
 :- use_module(library(pcre)).
-:- dynamic ping_match/3.
+:- dynamic ping_match/4.
 :- dynamic me/3.
 
 url(Command, URL) :-
@@ -72,11 +72,14 @@ save_matches :-
 
 % telegram_command_ping_add
 assert_match(ChatID, Username, Match) :-
-    assert(ping_match(ChatID, Username, Match)).
+    assert(ping_match(ChatID, Username, 0, Match)).
+
+assert_match(ChatID, Username, Rating, Match) :-
+    assert(ping_match(ChatID, Username, Rating, Match)).
 
 % telegram_command_ping_delete
 retract_match(ChatID, Username, Match) :-
-    retract(ping_match(ChatID, Username, Match)).
+    retract(ping_match(ChatID, Username, _, Match)).
 
 % telegram_command_ping_add
 % telegram_command_ping_delete
@@ -111,8 +114,31 @@ get_ping_match(Message, Username) :-
     consult('db/pingers'),
     ping_phrase(PingPhrase),
     member(PingPhrase, TextSplitted),
-    ping_match(ChatID, Username, Match),
-    member(Match, TextSplitted).
+    ping_match(ChatID, Username, Rating, Match),
+    member(Match, TextSplitted),
+    increment_rating(ping_match(ChatID, Username, Rating, Match)).
+
+
+increment_rating(ping_match(ChatID, Username, Rating, Match)) :-
+    retract_match(ChatID, Username, Match),
+    NewRating is Rating + 1,
+    assert_match(ChatID, Username, NewRating, Match),
+    sort_matches(ChatID, Username).
+
+sort_matches(ChatID, Username) :-
+    findall(
+        X,
+        (ping_match(ChatID, Username, Rating, Match), X = Rating-Match),
+        Matches
+    ),
+    keysort(Matches, Sorted),
+    reverse(Sorted, RevSorted),
+    forall(member(_-XMatch, Matches),
+          retract_match(ChatID, Username, XMatch)),
+    forall(member(SRating-SMatch, RevSorted),
+          assert_match(ChatID, Username, SRating, SMatch)),
+    save_matches.
+
 
 % get_ping_match
 strip_chars(X, [], X) :- !.

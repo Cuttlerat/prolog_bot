@@ -65,7 +65,7 @@ telegram_command_ping_show_(UsernameArg, Message, Output) :-
     ; string_concat("@", UsernameArg, Username)
     ),
     ChatID = Message.get(message).get(chat).get(id),
-    findall(Match, ping_match(ChatID, Username, Match), Matches),
+    findall(Match, ping_match(ChatID, Username, _, Match), Matches),
     ( Matches = []
     -> string_concat("No matches for ", Username, Output)
     ; atomics_to_string(Matches, "\n", Output)
@@ -80,7 +80,7 @@ telegram_command_ping_add(Matches, Message, Output) :-
     string_concat("@", Message.get(message).get(from).get(username), Username),
     ChatID = Message.get(message).get(chat).get(id),
     maplist(unify_match, Matches, UnifiedMatches),
-    exclude(ping_match(ChatID, Username), UnifiedMatches, NewMatches),
+    exclude(ping_match(ChatID, Username, _), UnifiedMatches, NewMatches),
     maplist(assert_match(ChatID, Username), NewMatches),
     save_matches,
     ( NewMatches = []
@@ -96,7 +96,7 @@ telegram_command_ping_delete(Matches, Message, Output) :-
     string_concat("@", Message.get(message).get(from).get(username), Username),
     ChatID = Message.get(message).get(chat).get(id),
     maplist(unify_match, Matches, UnifiedMatches),
-    include(ping_match(ChatID, Username), UnifiedMatches, FoundMatches),
+    include(ping_match(ChatID, Username, _), UnifiedMatches, FoundMatches),
     maplist(retract_match(ChatID, Username), FoundMatches),
     save_matches,
     ( FoundMatches = []
