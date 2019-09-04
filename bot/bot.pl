@@ -92,6 +92,10 @@ ping(Message, Usernames) :-
 
 
 process_message(Message) :-
+    _ = Message.get(message).get(forward_from),
+    !.
+
+process_message(Message) :-
     is_command(Message),
     bot_command(Message),
     !.
