@@ -57,6 +57,12 @@ telegram_command_ping_show([Username], Message, Output) :-
     telegram_command_ping_show_(Username, Message, Output),
     !.
 
+telegram_command_ping_show([], _, Output) :-
+    O1 = "Looks like you don't have a username and can't have any casts",
+    O2 = "If you want to check someones casts, try this: /ping_show @username",
+    atomics_to_string([O1, O2], "\n", Output),
+    !.
+
 telegram_command_ping_show(_, _, "Please enter only one username").
 
 telegram_command_ping_show_(UsernameArg, Message, Output) :-
