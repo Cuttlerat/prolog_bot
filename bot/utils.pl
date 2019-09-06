@@ -101,8 +101,9 @@ replace_(X,Y,[H|T],[H|NT]) :-
 % telegram_command_ping_add
 % telegram_command_ping_delete
 unify_match(In, Out) :-
-    string_lower(In, Tmp),
-    replace("ё", "е", Tmp, Out).
+    string_lower(In, Tmp1),
+    replace("ё", "е", Tmp1, Tmp2),
+    replace("\n", " ", Tmp2, Out).
 
 % ping
 get_ping_match(Message, Username) :-
