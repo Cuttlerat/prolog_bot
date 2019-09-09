@@ -103,7 +103,8 @@ replace_(X,Y,[H|T],[H|NT]) :-
 unify_match(In, Out) :-
     string_lower(In, Tmp1),
     replace("ё", "е", Tmp1, Tmp2),
-    replace("\n", " ", Tmp2, Out).
+    replace("\n", " ", Tmp2, Tmp3),
+    replace_emoji(Tmp3, Out).
 
 % ping
 get_ping_match(Message, Username) :-

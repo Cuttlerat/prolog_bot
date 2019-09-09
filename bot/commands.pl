@@ -143,8 +143,9 @@ telegram_command_set_me(Args, Message, Output) :-
     UserID = Message.get(message).get(from).get(id),
     ChatID = Message.get(message).get(chat).get(id),
     atomics_to_string(Args, " ", Match),
-    update_me(ChatID, UserID, Match),
-    format(string(Output), "Now I'll call you ~s", [Match]).
+    replace_emoji(Match, EMatch),
+    update_me(ChatID, UserID, EMatch),
+    format(string(Output), "Now I'll call you ~s", [EMatch]).
 
 % Me command
 % @arg Args is a list of strings with a text
