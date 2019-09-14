@@ -3,7 +3,7 @@
 :- use_module(library(http/html_write)).
 :- use_module(library(http/http_json)).
 
-:- http_handler(root(.), process_post, []).
+:- http_handler(root(.), process_request, []).
 
 ?- consult('db/pingers').
 ?- consult(utils).
@@ -11,7 +11,7 @@
 server(Port) :-
     http_server(http_dispatch, [port(Port)]).
 
-process_post(Request) :-
+process_request(Request) :-
     member(method(post), Request),
     http_read_json_dict(Request, Data),
     reply_json(_{}),
