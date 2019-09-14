@@ -5,22 +5,22 @@
 
 :- http_handler(root(.), process_post, []).
 
-webhook(Port) :-
+?- consult('db/pingers').
+?- consult(utils).
+
+server(Port) :-
     http_server(http_dispatch, [port(Port)]).
 
 process_post(Request) :-
     member(method(post), Request),
     http_read_json_dict(Request, Data),
-    Messages = Data.get(result),
-    maplist(process_message, Messages),
+    reply_json(_{}),
+    set_output(user_output),
+    process_message(Data),
     !.
 
-set_webhook :-
-    url("setWebhook", URL),
+webhook :-
     webhook_url(WebhookURL),
-    webhook(80),
-    http_post(URL,
-        form_data([
-            url = WebhookURL,
-        ]), _, []
-    ).
+    server(80),
+    set_webhook(WebhookURL),
+    thread_get_message(stop).

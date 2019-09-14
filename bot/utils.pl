@@ -245,3 +245,11 @@ replace_emoji(Text, Output) :-
     replace_emoji(C, Tail),
     string_concat(Head, Tail, Output),
     !.
+
+set_webhook(WebhookURL) :-
+    url("setWebhook", URL),
+    http_post(URL,
+        form_data([
+            url = WebhookURL
+        ]), _, []
+    ).

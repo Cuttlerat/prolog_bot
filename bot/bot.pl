@@ -111,11 +111,13 @@ process_message(_).
 
 
 main :-
-    log_print(log_level('INFO'), "Started").
+    log_print(log_level('INFO'), "Started"),
+    fail.
 
 main :-
     update_method("polling"),
     !,
+    set_webhook(""),
     repeat,
     get_updates(Data),
     Messages = Data.get(result),
@@ -127,7 +129,7 @@ main :-
 main :-
     update_method("webhook"),
     !,
-    consult(webhook).
-    set_webhook.
+    consult(webhook),
+    webhook.
 
 ?- main.
