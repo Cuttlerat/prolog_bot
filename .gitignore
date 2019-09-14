@@ -1,3 +1,4 @@
 pingers.pl
-token.pl
+config.pl
+.env
 *.swp

@@ -102,7 +102,7 @@ telegram_command_ping_delete(Matches, Message, Output) :-
     string_concat("@", Message.get(message).get(from).get(username), Username),
     ChatID = Message.get(message).get(chat).get(id),
     maplist(unify_match, Matches, UnifiedMatches),
-    include(ping_match(ChatID, Username, _), UnifiedMatches, FoundMatches),
+    findall(Match, (member(Match, UnifiedMatches), ping_match(ChatID, Username, _, Match)), FoundMatches),
     maplist(retract_match(ChatID, Username), FoundMatches),
     save_matches,
     ( FoundMatches = []

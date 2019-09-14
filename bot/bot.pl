@@ -3,7 +3,7 @@
 :- use_module(library(http/json)).
 :- use_module(library(clpfd)).
 
-?- consult('db/token').
+?- consult('db/config').
 ?- consult('db/pingers').
 ?- consult(utils).
 
@@ -112,6 +112,12 @@ process_message(_).
 
 main :-
     log_print(log_level('INFO'), "Started"),
+    fail.
+
+main :-
+    update_method("polling"),
+    !,
+    set_webhook(""),
     repeat,
     get_updates(Data),
     Messages = Data.get(result),
@@ -119,5 +125,11 @@ main :-
     update_offset(LastMessage),
     maplist(process_message, Messages),
     fail.
+
+main :-
+    update_method("webhook"),
+    !,
+    consult(webhook),
+    webhook.
 
 ?- main.
