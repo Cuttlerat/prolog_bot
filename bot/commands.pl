@@ -65,16 +65,22 @@ telegram_command_ping_show([], _, Output) :-
 
 telegram_command_ping_show(_, _, "Please enter only one username").
 
+pairs_strlist([], []) :- !.
+pairs_strlist([K-V|T], [H|T1]) :-
+    atomics_to_string([K,V], "\t", H),
+    pairs_strlist(T, T1).
+
 telegram_command_ping_show_(UsernameArg, Message, Output) :-
     ( string_concat("@", _, UsernameArg)
     -> Username = UsernameArg
     ; string_concat("@", UsernameArg, Username)
     ),
     ChatID = Message.get(message).get(chat).get(id),
-    findall(Match, ping_match(ChatID, Username, _, Match), Matches),
+    findall(Rate-Match, ping_match(ChatID, Username, Rate, Match), Matches),
     ( Matches = []
     -> string_concat("No matches for ", Username, Output)
-    ; atomics_to_string(Matches, "\n", Output)
+    ; pairs_strlist(Matches, OutList),
+      atomics_to_string(OutList, "\n", Output)
     ),
     !.
 
