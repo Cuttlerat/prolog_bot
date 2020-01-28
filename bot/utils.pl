@@ -49,6 +49,8 @@ log_print(log_level(LogLevel), Text) :-
 
 % telegram_command_date
 get_date(TimeStamp, Date) :-
+    TimeStamp >= 0,
+    TimeStamp =< 100000000000,
     http_timestamp(TimeStamp, Atom),
     atom_string(Atom, Date).
 

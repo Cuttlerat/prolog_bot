@@ -96,6 +96,18 @@ process_message(Message) :-
     !.
 
 process_message(Message) :-
+    _ = Message.get(message).get(document).get(thumb).get(width),
+    not(_ = Message.get(message).get(animation)),
+    !,
+    send_message(reply("Please attach your photo as an image, not as a file"),
+        Message.get(message).get(message_id),
+        Message.get(message).get(chat).get(id)),
+    delete_message(Message),
+    atomics_to_string(["Deleted image from",
+         Message.get(message).get(from).get(username)], " ", Log),
+    log_print(log_level('INFO'), Log).
+
+process_message(Message) :-
     is_command(Message),
     bot_command(Message),
     !.
