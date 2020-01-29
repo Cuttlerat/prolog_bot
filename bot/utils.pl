@@ -4,6 +4,7 @@
 :- use_module(library(url)).
 :- use_module(library(http/http_header)).
 :- use_module(library(pcre)).
+:- use_module(library(http/html_write)).
 :- dynamic ping_match/4.
 :- dynamic me/3.
 
@@ -255,3 +256,14 @@ set_webhook(WebhookURL) :-
             url = WebhookURL
         ]), _, []
     ).
+
+html2text(Html, Text) :-
+    new_memory_file(Handle),
+    open_memory_file(Handle, write, S),
+    print_html(S, Html),
+    close(S),
+    open_memory_file(Handle, read, R, [free_on_close(true)]),
+    read_string(R, _, Text),
+    close(R).
+
+
