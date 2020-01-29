@@ -7,6 +7,15 @@
 ?- consult('db/pingers').
 ?- consult(utils).
 
+send_message_(URL, Data, Response) :-
+    catch(
+        http_post(URL, Data, Response, []),
+        error(_, context(_, status(ErrorCode, Response))),
+        (
+            format(string(Log), "Couldn't send message: ~w - ~w", [ErrorCode, Response]),
+            log_print(log_level('ERROR'), Log)
+        )
+    ).
 
 send_message(Text, MessageID, ChatID) :-
     string(Text),
@@ -16,53 +25,40 @@ send_message(Text, MessageID, ChatID) :-
 send_message(reply(Text), MessageID, ChatID) :-
     url("sendMessage", URL),
     replace_emoji(Text, EmojiText),
-    catch(
-        http_post(URL,
-            form_data([
-                text = EmojiText,
-                reply_to_message_id = MessageID,
-                chat_id = ChatID
-            ]), _, []
-        ),
-        error(_, context(_, status(_, _))),
-        send_message(no_reply(Text), _, ChatID)
-    ),
+    Data = form_data([
+        text = EmojiText,
+        reply_to_message_id = MessageID,
+        chat_id = ChatID]),
+    send_message_(URL, Data, _),
+    !.
+
+send_message(no_reply(html(Text)), _, ChatID) :-
+    url("sendMessage", URL),
+    replace_emoji(Text, EmojiText),
+    Data = form_data([
+       text = EmojiText,
+       chat_id = ChatID,
+       parse_mode = "HTML"]),
+    send_message_(URL, Data, _),
     !.
 
 send_message(no_reply(Text), _, ChatID) :-
     url("sendMessage", URL),
     replace_emoji(Text, EmojiText),
-    catch(
-        http_post(URL,
-            form_data([
-                text = EmojiText,
-                chat_id = ChatID
-            ]), _, []
-        ),
-        error(_, context(_, status(ErrorCode, Response))),
-        (
-            format(string(Log), "Couldn't send message: ~w - ~w", [ErrorCode, Response]),
-            log_print(log_level('ERROR'), Log)
-        )
-    ).
+    Data = form_data([
+        text = EmojiText,
+        chat_id = ChatID]),
+    send_message_(URL, Data, _),
+    !.
 
 send_message(location(Lat, Lon), MessageID, ChatID) :-
     url("sendLocation", URL),
-    catch(
-        http_post(URL,
-            form_data([
-                latitude = Lat,
-                longitude = Lon,
-                reply_to_message_id = MessageID,
-                chat_id = ChatID
-            ]), _, []
-        ),
-        error(_, context(_, status(ErrorCode, Response))),
-        (
-            format(string(Log), "Couldn't send location: ~w - ~w", [ErrorCode, Response]),
-            log_print(log_level('ERROR'), Log)
-        )
-    ).
+    Data = form_data([
+        latitude = Lat,
+        longitude = Lon,
+        reply_to_message_id = MessageID,
+        chat_id = ChatID]),
+    send_message_(URL, Data, _).
 
 bot_command(Message) :-
     text_to_command(Message.get(message).get(text), Command, Args),

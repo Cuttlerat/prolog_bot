@@ -157,14 +157,16 @@ telegram_command_set_me(Args, Message, Output) :-
 % @arg Args is a list of strings with a text
 % This command replaces the user's message with a 'me' name + text from Args
 
-telegram_command_me(Args, Message, no_reply(Output)) :-
+telegram_command_me(Args, Message, no_reply(html(Output))) :-
     UserID = Message.get(message).get(from).get(id),
     ChatID = Message.get(message).get(chat).get(id),
     consult('db/pingers'),
     me(ChatID, UserID, Match),
     capitalize(Match, CapitalizedMatch),
     delete_message(Message),
-    atomics_to_string([CapitalizedMatch|Args], " ", Output),
+    atomics_to_string([CapitalizedMatch|Args], " ", Text),
+    % TODO: Escape HTML
+    atomics_to_string(["<i>", Text, "</i>"], Output),
     !.
 
 telegram_command_me(_, _, "Please add a 'me' cast for yourself by /set_me command").
