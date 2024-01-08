@@ -9,32 +9,32 @@ services:
     command: swipl bot.pl
     env_file:
       - .env
-    expose:
-      - 80
-    depends_on:
-      - nginx-proxy
-      - nginx-proxy-letsencrypt
+        #    expose:
+        #      - 80
+        #    depends_on:
+        #      - nginx-proxy
+        #      - nginx-proxy-letsencrypt
 
-  nginx-proxy:
-    image: jwilder/nginx-proxy
-    ports:
-      - 80:80
-      - 443:443
-    volumes:
-      - nginx_certs:/etc/nginx/certs
-      - nginx_vhost:/etc/nginx/vhost.d
-      - nginx_html:/usr/share/nginx/html
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-
-  nginx-proxy-letsencrypt:
-    image: jrcs/letsencrypt-nginx-proxy-companion
-    volumes_from:
-      - nginx-proxy
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    env_file:
-      - .env
-
+        #  nginx-proxy:
+        #    image: jwilder/nginx-proxy
+        #    ports:
+        #      - 80:80
+        #      - 443:443
+        #    volumes:
+        #      - nginx_certs:/etc/nginx/certs
+        #      - nginx_vhost:/etc/nginx/vhost.d
+        #      - nginx_html:/usr/share/nginx/html
+        #      - /var/run/docker.sock:/tmp/docker.sock:ro
+        #
+        #  nginx-proxy-letsencrypt:
+        #    image: jrcs/letsencrypt-nginx-proxy-companion
+        #    volumes_from:
+        #      - nginx-proxy
+        #    volumes:
+        #      - /var/run/docker.sock:/var/run/docker.sock:ro
+        #    env_file:
+        #      - .env
+        #
 volumes:
   nginx_certs:
   nginx_vhost:

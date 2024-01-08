@@ -14,7 +14,7 @@ url(Command, URL) :-
 
 get_updates(Data) :-
     url("getUpdates", URL),
-    Headers = [request_header('Accept'='application/json')],
+    Headers = [request_header('Accept'='application/json'), timeout(10)],
     setup_call_cleanup(
         http_open(URL, In, Headers),
         json_read_dict(In, Data),
@@ -111,10 +111,18 @@ unify_match(In, Out) :-
 
 % ping
 get_ping_match(Message, Username) :-
-    ChatID = Message.get(message).get(chat).get(id),
     MessageText = Message.get(message).get(text),
+    ChatID = Message.get(message).get(chat).get(id),
+    get_ping_match_helper(MessageText, ChatID, Username).
+
+get_ping_match(Message, Username) :-
+    MessageText = Message.get(message).get(caption),
+    ChatID = Message.get(message).get(chat).get(id),
+    get_ping_match_helper(MessageText, ChatID, Username).
+
+get_ping_match_helper(MessageText, ChatID, Username) :-
     unify_match(MessageText, TextUnified),
-    strip_chars(TextUnified, [",", ".", ";", ":", "!", "?"], TextStripped),
+    strip_chars(TextUnified, [",", ".", ";", ":", "!", "?", "\"", "'"], TextStripped),
     split_string(TextStripped, " ", " ", TextSplitted),
     consult('db/pingers'),
     ping_phrase(PingPhrase),
@@ -122,7 +130,6 @@ get_ping_match(Message, Username) :-
     ping_match(ChatID, Username, Rating, Match),
     member(Match, TextSplitted),
     increment_rating(ping_match(ChatID, Username, Rating, Match)).
-
 
 increment_rating(ping_match(ChatID, Username, Rating, Match)) :-
     retract_match(ChatID, Username, Match),

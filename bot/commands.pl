@@ -98,7 +98,11 @@ telegram_command_ping_add(Matches, Message, Output) :-
     ( NewMatches = []
     -> Output = "Nothing to add"
     ; atomics_to_string(["Added matches:"|NewMatches], "\n", Output)
-    ).
+    ),
+    !.
+
+telegram_command_ping_add(_, _, Output) :-
+    Output = "You must have a username to add casts".
 
 % Ping delete command
 % @arg Args is a list of strings with matches
