@@ -2,3 +2,4 @@ pingers.pl
 config.pl
 .env
 *.swp
+helm/secrets.yaml

@@ -1,0 +1,13 @@
+image:
+  name: prolog-bot
+  tag: 0.1.1
+
+conf: |
+  update_method("polling").
+  ping_phrase("слышь").
+  ping_phrase("слыш").
+
+tg_token: ""
+
+pvc:
+  size: 1Gi

@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-{{ .Chart.Name }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: {{ .Release.Name }}-{{ .Chart.Name }}
+          image: {{ .Values.image.name }}:{{ .Values.image.tag }}
+          volumeMounts:
+            - name: conf
+              mountPath: /app/conf
+            - name: db
+              mountPath: /app/db
+      initContainers:
+        - name: init-conf
+          image: busybox:1.36
+          volumeMounts:
+            - name: db
+              mountPath: /db
+            - name: conf
+              mountPath: /conf
+          env:
+            - name: CONFIG
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-config
+                  key: config
+            - name: TG_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-tg-token
+                  key: token
+          command:
+            - sh
+            - -c
+            - 'echo "${CONFIG}" > /conf/config.pl; echo "token(\"${TG_TOKEN}\")." > /conf/token.pl; touch /db/pingers.pl'
+      volumes:
+        - name: conf
+          emptyDir: {}
+        - name: db
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-db
+

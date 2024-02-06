@@ -3,7 +3,8 @@
 :- use_module(library(http/json)).
 :- use_module(library(clpfd)).
 
-?- consult('db/config').
+?- consult('conf/token').
+?- consult('conf/config').
 ?- consult('db/pingers').
 ?- consult(utils).
 
